@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>ロングトーン／呼吸タイマー</title>
+    <meta name="description" content="調を選んでスタートするだけ。呼吸→ロングトーン→クールダウンの3つの日課メニュー（約5分／約10分／約15分）をテンポ60で案内する、ブラウザだけで動くタイマーです。" />
+<meta property="og:title" content="ロングトーン／呼吸タイマー" />
+<meta property="og:description" content="調を選んでスタートするだけ。呼吸→ロングトーン→クールダウンの3つの日課メニュー（約5分／約10分／約15分）をテンポ60で案内する、ブラウザだけで動くタイマーです。" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://shibatamago-dev.github.io/longtone-timer/" />
+<meta property="og:image" content="https://shibatamago-dev.github.io/longtone-timer/ogp.png" />
+<meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --bg:#f4f2ec; --surface:#fffdf8; --surface2:#ece8dc; --ink:#23211c; --ink2:#5c574c;
+        --line:#d8d2c2; --accent:#9a6b1e; --accent-ink:#7c5514;
+        --in:#1f6f6b; --out:#3d6d9e; --blow:#9a6b1e; --rest:#5f7a4d;
+        --phase:#9a6b1e; --danger-bg:#fbeae6; --danger-ink:#8c2f1d; --danger-line:#e3a190;
+        --chip-on:#23211c; --chip-on-ink:#fffdf8;
+        --shadow:0 2px 10px rgba(35,33,28,.08);
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#171713; --surface:#22221d; --surface2:#2c2c25; --ink:#f0ecdf; --ink2:#b6b09e;
+          --line:#3d3d33; --accent:#d9a94f; --accent-ink:#e8bc66;
+          --in:#4db8b0; --out:#7aa8d8; --blow:#d9a94f; --rest:#93b877;
+          --danger-bg:#3a201b; --danger-ink:#f2b3a3; --danger-line:#7a4033;
+          --chip-on:#f0ecdf; --chip-on-ink:#22221d;
+          --shadow:0 2px 10px rgba(0,0,0,.35);
+        }
+      }
+      *{box-sizing:border-box;}
+      button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]){min-height:2.25rem;}
+      body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",system-ui,sans-serif;line-height:1.6;}
+      main{max-width:760px;margin:0 auto;padding:16px 16px 48px;}
+      h1{font-family:"Noto Serif JP",serif;font-size:1.45rem;line-height:1.35;margin:6px 0 4px;}
+      .lead{color:var(--ink2);font-size:.92rem;margin:0 0 14px;}
+      .lead b{color:var(--ink);}
+      .safety{background:var(--danger-bg);color:var(--danger-ink);border:1px solid var(--danger-line);border-radius:10px;padding:10px 14px;font-size:.9rem;margin:0 0 18px;}
+      .safety b{font-weight:900;}
+      section{margin:0 0 22px;}
+      .sec-title{font-size:.82rem;font-weight:700;letter-spacing:.08em;color:var(--ink2);margin:0 0 8px;}
+      /* menu cards */
+      .menus{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+      @media (max-width:560px){.menus{grid-template-columns:1fr;}}
+      .menu-card{text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;font:inherit;color:inherit;box-shadow:var(--shadow);width:100%;}
+      .menu-card[aria-pressed="true"]{border-color:var(--accent);}
+      .menu-card .m-name{font-weight:900;font-size:1.02rem;display:block;}
+      .menu-card .m-time{color:var(--accent-ink);font-weight:700;font-size:.85rem;display:block;margin:2px 0;}
+      .menu-card .m-desc{color:var(--ink2);font-size:.8rem;display:block;line-height:1.5;}
+      /* segmented */
+      .seg{display:flex;gap:8px;flex-wrap:wrap;}
+      .seg button{flex:1 1 30%;background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:8px 6px;font:inherit;font-weight:700;color:inherit;cursor:pointer;min-height:2.75rem;}
+      .seg button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on);}
+      .seg button small{display:block;font-weight:400;font-size:.72rem;opacity:.75;}
+      #keySeg button{flex:1 1 21%;}
+      @media (max-width:560px){#keySeg button{flex:1 1 28%;}}
+      /* chips */
+      .chip-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;}
+      .chip-row .c-label{font-weight:700;font-size:.9rem;min-width:3.2em;}
+      .chip{min-width:3.4rem;padding:6px 12px;border-radius:999px;border:2px solid var(--line);background:var(--surface);font:inherit;font-weight:700;color:inherit;cursor:pointer;}
+      .chip[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on);}
+      .chip:disabled{opacity:.45;cursor:default;}
+      .menu-card:disabled{opacity:.55;cursor:default;}
+      .link-btn:disabled{opacity:.45;cursor:default;text-decoration:none;}
+      .chip-note{font-size:.8rem;color:var(--ink2);margin:4px 0 0;}
+      .link-btn{background:none;border:none;color:var(--accent-ink);font:inherit;font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:underline;padding:6px 4px;}
+      /* stage */
+      .stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 18px 18px;text-align:center;}
+      .stage-top{display:flex;justify-content:space-between;gap:8px;font-size:.82rem;color:var(--ink2);font-weight:700;flex-wrap:wrap;}
+      .stage-long{margin:8px 0 0;font-size:.88rem;font-weight:700;color:var(--ink);background:var(--surface2);border-radius:999px;padding:5px 12px;display:inline-block;}
+      .chip-current{font-size:.88rem;font-weight:700;color:var(--ink);margin:2px 0 6px;}
+      .phase{font-family:"Noto Serif JP",serif;font-weight:900;font-size:clamp(3.4rem,15vw,5.6rem);line-height:1.15;color:var(--phase);margin:10px 0 2px;}
+      .phase-sub{font-size:.95rem;color:var(--ink2);min-height:1.6em;margin:0;}
+      /* now/next display: left card is always "now", right card is always "next" */
+      .phase-area{min-height:132px;display:flex;flex-direction:column;justify-content:center;}
+      .phase-pair{display:flex;align-items:stretch;justify-content:center;gap:10px;margin:10px 0 2px;}
+      .phase-pair[hidden],.phase[hidden]{display:none !important;}
+      .phase-card{flex:1 1 0;max-width:216px;border:2px solid var(--line);border-radius:16px;padding:10px 8px 12px;background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;transition:border-color .25s ease,background .25s ease;}
+      .phase-card .pc-role{font-size:.68rem;font-weight:900;letter-spacing:.08em;padding:2px 9px;border-radius:999px;background:var(--ink2);color:var(--surface);min-height:1.55em;line-height:1.55;text-align:center;}
+      .phase-card .pc-label{font-family:"Noto Serif JP",serif;font-weight:900;font-size:clamp(2.7rem,11vw,4rem);line-height:1.12;}
+      .phase-card .pc-beats{font-size:.84rem;font-weight:700;line-height:1.3;}
+      .phase-card .pc-note{font-size:.8rem;font-weight:700;line-height:1.35;text-align:center;min-height:1.35em;}
+      .phase-card .pc-note:empty{display:none;}
+      .phase-card .pc-hint{font-size:.75rem;color:var(--ink2);line-height:1.4;text-align:center;}
+      .phase-card.is-now{background:var(--surface);border-width:3px;padding:9px 7px 11px;}
+      .phase-card.is-now .pc-role{background:var(--ink);color:var(--surface);}
+      .phase-card.is-now[data-kind="in"]{border-color:var(--in);}
+      .phase-card.is-now[data-kind="in"] .pc-label{color:var(--in);}
+      .phase-card.is-now[data-kind="out"]{border-color:var(--out);}
+      .phase-card.is-now[data-kind="out"] .pc-label{color:var(--out);}
+      .phase-card.is-now[data-kind="blow"]{border-color:var(--blow);}
+      .phase-card.is-now[data-kind="blow"] .pc-label{color:var(--blow);}
+      .phase-card.is-now[data-kind="restnote"]{border-color:var(--rest);}
+      .phase-card.is-now[data-kind="restnote"] .pc-label{color:var(--rest);}
+      .phase-card.is-now[data-kind="rest"]{border-color:var(--rest);}
+      .phase-card.is-now[data-kind="rest"] .pc-label{color:var(--rest);}
+      .phase-card.is-now .pc-beats{color:var(--ink);}
+      .phase-card.is-next{background:var(--surface2);border-color:var(--line);}
+      .phase-card.is-next .pc-label{color:var(--ink2);opacity:.55;}
+      .phase-card.is-next .pc-beats{color:var(--ink2);opacity:.7;}
+      .phase-card.is-next .pc-note{color:var(--ink2);opacity:.75;}
+      .phase-card.is-next .pc-hint{color:var(--ink2);opacity:.65;}
+      .phase-card.is-next[data-kind="end"] .pc-label{font-size:clamp(2rem,8vw,3rem);color:var(--ink2);}
+      @media (max-width:420px){.phase-card .pc-hint{display:none;}.phase-pair{gap:6px;}}
+      .note-now{margin:12px 0 0;}
+      .note-now .n-name{font-family:"Noto Serif JP",serif;font-size:2.2rem;font-weight:900;}
+      .note-now .n-finger{color:var(--ink2);font-size:.92rem;}
+      .dyn{margin:10px auto 0;max-width:420px;}
+      .dyn-label{font-weight:900;font-size:1.05rem;letter-spacing:.06em;}
+      .dyn-bar{height:10px;border-radius:5px;background:var(--surface2);overflow:hidden;margin-top:6px;}
+      .dyn-fill{height:100%;background:var(--phase);width:20%;transition:width .5s linear;}
+      .dots{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:16px 0 6px;min-height:16px;}
+      .dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--phase);background:transparent;}
+      .dot.done{background:var(--phase);}
+      .remain{font-size:1rem;color:var(--ink2);}
+      .remain b{font-size:1.5rem;color:var(--ink);}
+      .next-box{margin:14px auto 0;max-width:440px;background:var(--surface2);border-radius:10px;padding:8px 12px;font-size:.9rem;}
+      .next-box b{font-size:1.02rem;}
+      .progress{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:16px 0 4px;}
+      .progress-fill{height:100%;background:var(--accent);width:0%;}
+      .progress-label{font-size:.8rem;color:var(--ink2);display:flex;justify-content:space-between;}
+      /* controls */
+      .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+      .controls .primary{grid-column:1/-1;background:var(--accent);color:#fff;border:none;font-size:1.15rem;font-weight:900;padding:14px;border-radius:12px;cursor:pointer;font-family:inherit;min-height:3.4rem;}
+      @media (prefers-color-scheme: dark){.controls .primary{color:#1d1a12;}}
+      .controls .ctl{background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:10px 6px;font:inherit;font-weight:700;color:inherit;cursor:pointer;min-height:3rem;}
+      .controls .ctl[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on);}
+      .controls .ctl:disabled,.controls .primary:disabled{opacity:.45;cursor:default;}
+      .status-line{font-size:.8rem;color:var(--ink2);text-align:center;margin:10px 0 0;min-height:1.5em;}
+      /* breakdown */
+      .breakdown{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 16px;box-shadow:var(--shadow);}
+      .breakdown li{margin:8px 0;}
+      .breakdown ul{margin:0;padding-left:1.2em;}
+      .breakdown .b-sec{font-weight:700;}
+      .breakdown .b-time{color:var(--accent-ink);font-weight:700;font-size:.85em;}
+      .breakdown .b-note{color:var(--ink2);font-size:.85em;display:block;}
+      .tips{font-size:.88rem;color:var(--ink2);}
+      .tips li{margin:5px 0;}
+      .tips b{color:var(--ink);}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>ロングトーン／呼吸タイマー</h1>
+      <p class="lead">管楽器などのロングトーン日課用。テンポは <b>♩=60（1拍＝1秒）固定</b>、選んだ<b>調の主音</b>から半音ずつ下がります。長さを競うものではなく、音色・ピッチ・強弱のためのタイマーです。</p>
+
+      <p class="safety"><b>⚠ 安全のために：</b>めまい・しびれ・息苦しさが出たら、すぐに中止して普通の呼吸に戻ってください。苦しいときは吸う・吐くを短くしてかまいません。無理に長く吹かないこと。</p>
+
+      <section aria-labelledby="t-menu">
+        <p class="sec-title" id="t-menu">メニュー</p>
+        <div class="menus" id="menus"></div>
+      </section>
+
+      <section aria-labelledby="t-key">
+        <p class="sec-title" id="t-key">調</p>
+        <div class="seg" id="keySeg"></div>
+        <p class="chip-note">選んだ調の主音から始めます。B・Cは半音ずつ下がって1オクターブ下の主音まで、Aは主音に戻りながら下がるレミントン型です。選んだ調はこのブラウザに保存されます。</p>
+      </section>
+
+      <section aria-labelledby="t-chip">
+        <p class="sec-title" id="t-chip">ロングトーンの長さ（任意の調整）</p>
+        <div class="chip-row"><span class="c-label">吹く</span><span id="blowChips"></span></div>
+        <div class="chip-row"><span class="c-label">休む</span><span id="restChips"></span></div>
+        <p class="chip-current" id="chipCurrent" aria-live="polite"></p>
+        <p class="chip-note" id="chipLockNote" hidden><b>▶ 実行中はチップ・メニュー・調を変更できません。</b>変更したいときは、下の「⏮ 最初から（リセット）」を押して止めてから変えてください。</p>
+        <p class="chip-note">ロングトーン部分だけに効きます（呼吸・休憩はメニュー通り）。変えた内容は<b>メニューごとに</b>このブラウザに保存されます。別のメニューに切り替えると、そのメニューの既定（またはそのメニューで保存した値）に戻ります。練習を始めたあとは、終わるかリセットするまでチップ・メニュー・調は変更できません。<button type="button" class="link-btn" id="chipReset">このメニューの既定に戻す</button></p>
+      </section>
+
+      <section aria-label="タイマー">
+        <div class="stage">
+          <div class="stage-top"><span id="stageSection">—</span><span id="stageCount">—</span></div>
+          <p class="stage-long" id="stageLongInfo">ロングトーン：—</p>
+          <div class="phase-area" id="phaseArea">
+            <div class="phase-pair" id="phasePair" hidden>
+              <div class="phase-card is-now" id="cardA" data-kind="in">
+                <span class="pc-role">いま</span>
+                <span class="pc-label" id="cardALabel">吸う</span>
+                <span class="pc-beats" id="cardABeats">4拍</span>
+                <span class="pc-note" id="cardANote"></span>
+                <span class="pc-hint" id="cardAHint">鼻からゆっくり</span>
+              </div>
+              <div class="phase-card is-next" id="cardB" data-kind="out">
+                <span class="pc-role">つぎ</span>
+                <span class="pc-label" id="cardBLabel">吐く</span>
+                <span class="pc-beats" id="cardBBeats">8拍</span>
+                <span class="pc-note" id="cardBNote"></span>
+                <span class="pc-hint" id="cardBHint">細く長く</span>
+              </div>
+            </div>
+            <p class="phase" id="phaseLabel">準備OK</p>
+          </div>
+          <p class="phase-sub" id="phaseSub">下のスタートを押すと始まります</p>
+          <div class="note-now" id="noteNow" hidden>
+            <span class="n-name" id="noteName"></span>
+            <span class="n-finger" id="noteFinger"></span>
+          </div>
+          <div class="dyn" id="dynBox" hidden>
+            <div class="dyn-label" id="dynLabel">mf</div>
+            <div class="dyn-bar"><div class="dyn-fill" id="dynFill"></div></div>
+          </div>
+          <div class="dots" id="dots" aria-hidden="true"></div>
+          <p class="remain" id="remainLine">残り <b>—</b></p>
+          <div class="next-box" id="nextBox">つぎ：—</div>
+          <div class="progress"><div class="progress-fill" id="progFill"></div></div>
+          <div class="progress-label"><span id="elapsedLabel">経過 0:00</span><span id="totalLabel">合計 —</span></div>
+          <div class="controls">
+            <button type="button" class="primary" id="btnStart">▶ スタート</button>
+            <button type="button" class="ctl" id="btnSkip" disabled>次のフェーズへ ⏭</button>
+            <button type="button" class="ctl" id="btnRepeat" aria-pressed="false" disabled>この音をくり返し</button>
+            <button type="button" class="ctl" id="btnRestart" disabled>⏮ 最初から（リセット）</button>
+            <button type="button" class="ctl" id="btnSound" aria-pressed="true">音：オン</button>
+          </div>
+          <p class="status-line" id="statusLine"></p>
+        </div>
+      </section>
+
+      <section aria-labelledby="t-break">
+        <p class="sec-title" id="t-break">メニューの中身</p>
+        <div class="breakdown"><ul id="breakdown"></ul></div>
+      </section>
+
+      <section aria-labelledby="t-tips">
+        <p class="sec-title" id="t-tips">進め方のメモ</p>
+        <ul class="tips">
+          <li><b>最初の音はエアアタック</b>（タンギングなし）で、音量は <b>mf 一定</b>が基本です。</li>
+          <li>呼吸は<b>吸う：吐く＝1：2</b>が基本です（メニューAの呼吸、B・Cのクールダウン）。AのクールダウンとB・Cの呼吸は吸う・吐くが均等です。息止めはしません。</li>
+          <li>山（やま）は前半で p→f、後半で f→p。谷（たに）はその逆 f→p→f です。画面の強弱表示に合わせてください。</li>
+          <li>ピッチの確認は手元のチューナーでどうぞ（このタイマーに判定機能はありません）。</li>
+          <li>調は、その日の楽器や音域に合うものを選んでください。音名は主音を基準に半音ずつ下がって表示されます。</li>
+        </ul>
+      </section>
+    </main>
+
+    <script>
+    (function(){
+      "use strict";
+      // ---------- key / note data (descending chromatic from the chosen tonic) ----------
+      // Pitch classes with flat spellings, C = 0.
+      var PITCH_NAMES = ["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
+      var KEYS = [
+        {id:"C",  name:"C調",  tonic:"C",  pitch:0},
+        {id:"G",  name:"G調",  tonic:"G",  pitch:7},
+        {id:"D",  name:"D調",  tonic:"D",  pitch:2},
+        {id:"A",  name:"A調",  tonic:"A",  pitch:9},
+        {id:"E",  name:"E調",  tonic:"E",  pitch:4},
+        {id:"B",  name:"B調",  tonic:"B",  pitch:11},
+        {id:"F",  name:"F調",  tonic:"F",  pitch:5},
+        {id:"Bb", name:"B♭調", tonic:"B♭", pitch:10},
+        {id:"Eb", name:"E♭調", tonic:"E♭", pitch:3},
+        {id:"Ab", name:"A♭調", tonic:"A♭", pitch:8},
+        {id:"Db", name:"D♭調", tonic:"D♭", pitch:1},
+        {id:"Gb", name:"G♭調", tonic:"G♭", pitch:6}
+      ];
+      function keyById(id){ for(var i=0;i<KEYS.length;i++) if(KEYS[i].id===id) return KEYS[i]; return KEYS[7]; }
+      function currentKey(){ return keyById(state.key); }
+      // offset = semitones below the tonic (0 = tonic, 12 = tonic an octave below)
+      function noteAt(offset){
+        var k = currentKey();
+        var pc = ((k.pitch - offset) % 12 + 12) % 12;
+        var low = offset >= 12;
+        return { name:(low?"低い ":"")+PITCH_NAMES[pc], offset:offset };
+      }
+      function noteRelation(note){
+        if(!note) return "";
+        if(note.offset===0) return "主音（"+currentKey().name+"）";
+        if(note.offset===12) return "1オクターブ下の主音";
+        return "主音から"+note.offset+"半音下";
+      }
+      function straightNotes(n){ var a=[]; for(var i=0;i<n;i++) a.push(noteAt(i)); return a; }
+      function remingtonNotes(){
+        // Bb -> A -> Bb -> Ab -> Bb -> G ... 12 notes
+        var seq=[0,1,0,2,0,3,0,4,0,5,0,6]; return seq.map(noteAt);
+      }
+
+      // ---------- menus ----------
+      var MENUS = {
+        A:{ id:"A", name:"A はじめて", timeLabel:"約5分", desc:"呼吸とロングトーンの基本セット。レミントン型で戻りながら下がります。",
+            defBlow:4, defRest:4,
+            sections:[
+              {type:"breath", label:"呼吸", inB:4, outB:8, reps:8, note:"吸う：吐く＝1：2"},
+              {type:"rest", label:"休憩", sec:20},
+              {type:"long", label:"ロングトーン", pattern:"remington", dyn:"flat", note:"__REMINGTON__"},
+              {type:"breath", label:"クールダウン", inB:5, outB:5, reps:6}
+            ]},
+        B:{ id:"B", name:"B ふだん", timeLabel:"約10分", desc:"まっすぐ1オクターブ下まで下がるロングトーン＋「山」の強弱つき。",
+            defBlow:8, defRest:8,
+            sections:[
+              {type:"breath", label:"呼吸", inB:5, outB:5, reps:8},
+              {type:"rest", label:"休憩", sec:20},
+              {type:"long", label:"ロングトーン", pattern:"straight", count:13, dyn:"flat", note:"__STRAIGHT_FLAT__"},
+              {type:"rest", label:"休憩", sec:30},
+              {type:"long", label:"山のロングトーン", pattern:"straight", count:13, dyn:"mountain", note:"__STRAIGHT_MOUNTAIN__"},
+              {type:"breath", label:"クールダウン", inB:4, outB:8, reps:6, note:"吸う：吐く＝1：2"}
+            ]},
+        C:{ id:"C", name:"C じっくり", timeLabel:"約15分", desc:"Bの拡張版。山と谷を交互に、どのロングトーンも1オクターブ下まで。合計は約14〜15分です。",
+            defBlow:8, defRest:8,
+            sections:[
+              {type:"breath", label:"呼吸", inB:5, outB:5, reps:10},
+              {type:"rest", label:"休憩", sec:20},
+              {type:"long", label:"ロングトーン", pattern:"straight", count:13, dyn:"flat", note:"__STRAIGHT_FLAT__"},
+              {type:"rest", label:"休憩", sec:30},
+              {type:"long", label:"山と谷のロングトーン", pattern:"straight", count:13, dyn:"alternate", note:"__STRAIGHT_ALT__"},
+              {type:"rest", label:"休憩", sec:20},
+              {type:"long", label:"ロングトーン（復習）", pattern:"straight", count:13, dyn:"flat", note:"__STRAIGHT_AGAIN__"},
+              {type:"breath", label:"クールダウン", inB:4, outB:8, reps:6, note:"吸う：吐く＝1：2"}
+            ]}
+      };
+
+      // ---------- state ----------
+      var state = {
+        menu:"A", key:"Bb",
+        blowOverrides:{A:null,B:null,C:null}, restOverrides:{A:null,B:null,C:null},
+        sound:true,
+        steps:[], idx:0, running:false, paused:false,
+        phaseEnd:0, remainMs:0, lastBeat:-1, timerId:null,
+        repeat:false, elapsedBase:0, phaseStartElapsed:0, finished:false
+      };
+      try{
+        var savedMenu = localStorage.getItem("lt-menu"); if(savedMenu && MENUS[savedMenu]) state.menu=savedMenu;
+        var savedKey = localStorage.getItem("lt-key"); if(savedKey && KEYS.some(function(k){return k.id===savedKey;})) state.key=savedKey;
+        ["A","B","C"].forEach(function(k){
+          var sbk = localStorage.getItem("lt-blow-"+k); if(sbk){ var vb=parseInt(sbk,10); if(!isNaN(vb)) state.blowOverrides[k]=vb; }
+          var srk = localStorage.getItem("lt-rest-"+k); if(srk){ var vr=parseInt(srk,10); if(!isNaN(vr)) state.restOverrides[k]=vr; }
+        });
+        // Migrate the old single global override (lt-blow / lt-rest) to the
+        // last-used menu only, so it no longer leaks into every other menu.
+        var legacyBlow = localStorage.getItem("lt-blow");
+        if(legacyBlow && state.blowOverrides[state.menu]==null){
+          var lb = parseInt(legacyBlow,10);
+          if(!isNaN(lb) && lb!==MENUS[state.menu].defBlow) state.blowOverrides[state.menu]=lb;
+        }
+        var legacyRest = localStorage.getItem("lt-rest");
+        if(legacyRest && state.restOverrides[state.menu]==null){
+          var lr = parseInt(legacyRest,10);
+          if(!isNaN(lr) && lr!==MENUS[state.menu].defRest) state.restOverrides[state.menu]=lr;
+        }
+        if(legacyBlow){ try{ if(state.blowOverrides[state.menu]==null) localStorage.removeItem("lt-blow-"+state.menu); else localStorage.setItem("lt-blow-"+state.menu, String(state.blowOverrides[state.menu])); localStorage.removeItem("lt-blow"); }catch(e2){} }
+        if(legacyRest){ try{ if(state.restOverrides[state.menu]==null) localStorage.removeItem("lt-rest-"+state.menu); else localStorage.setItem("lt-rest-"+state.menu, String(state.restOverrides[state.menu])); localStorage.removeItem("lt-rest"); }catch(e3){} }
+      }catch(e){}
+      function save(key,val){ try{ if(val===null) localStorage.removeItem(key); else localStorage.setItem(key,val); }catch(e){} }
+      function saveOverride(kind, menuId, val){ save((kind==="blow"?"lt-blow-":"lt-rest-")+menuId, val); }
+      function beatsFor(menuId){
+        var m=MENUS[menuId];
+        var bo=state.blowOverrides[menuId], ro=state.restOverrides[menuId];
+        return { blow:(bo===null||bo===undefined||isNaN(bo)) ? m.defBlow : bo,
+                 rest:(ro===null||ro===undefined||isNaN(ro)) ? m.defRest : ro };
+      }
+      function blowBeats(){ return beatsFor(state.menu).blow; }
+      function restBeats(){ return beatsFor(state.menu).rest; }
+      function hasCustomOverride(){ return state.blowOverrides[state.menu]!=null || state.restOverrides[state.menu]!=null; }
+
+      // ---------- step building ----------
+      function buildStepsFor(menuId){
+        var menu = MENUS[menuId], beats = beatsFor(menuId), steps=[];
+        menu.sections.forEach(function(sec){
+          if(sec.type==="breath"){
+            for(var r=0;r<sec.reps;r++){
+              steps.push({kind:"in", label:"吸う", section:sec.label, dur:sec.inB, count:(r+1)+" / "+sec.reps+" 回目"});
+              steps.push({kind:"out", label:"吐く", section:sec.label, dur:sec.outB, count:(r+1)+" / "+sec.reps+" 回目"});
+            }
+          } else if(sec.type==="rest"){
+            steps.push({kind:"rest", label:"休憩", section:sec.label, dur:sec.sec, count:""});
+          } else if(sec.type==="long"){
+            var notes = sec.pattern==="remington" ? remingtonNotes() : straightNotes(sec.count);
+            notes.forEach(function(note,i){
+              var dyn = sec.dyn;
+              if(dyn==="alternate") dyn = (i%2===0) ? "mountain" : "valley";
+              var gid = steps.length;
+              steps.push({kind:"blow", label:"吹く", section:sec.label, dur:beats.blow, note:note, dyn:dyn, group:gid, count:(i+1)+" / "+notes.length+" 音目"});
+              steps.push({kind:"restnote", label:"休む", section:sec.label, dur:beats.rest, note:note, group:gid, count:(i+1)+" / "+notes.length+" 音目"});
+            });
+          }
+        });
+        return steps;
+      }
+      function buildSteps(){ return buildStepsFor(state.menu); }
+      function menuTotal(menuId){ return totalSeconds(buildStepsFor(menuId)); }
+      function totalSeconds(steps){ return steps.reduce(function(s,x){return s+x.dur;},0); }
+      function nextBlowNote(fromIdx){
+        for(var i=fromIdx;i<state.steps.length;i++){ if(state.steps[i].kind==="blow") return state.steps[i]; }
+        return null;
+      }
+      function fmt(sec){ var m=Math.floor(sec/60), s=Math.round(sec%60); if(s===60){m++;s=0;} return m+":"+(s<10?"0":"")+s; }
+
+      // ---------- audio ----------
+      var actx=null;
+      function ensureAudio(){
+        if(!state.sound) return null;
+        try{
+          if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+          if(actx.state==="suspended") actx.resume();
+          return actx;
+        }catch(e){ return null; }
+      }
+      function tone(freq, dur, type, gain, when){
+        var ctx=ensureAudio(); if(!ctx) return;
+        var t = ctx.currentTime + (when||0);
+        var o=ctx.createOscillator(), g=ctx.createGain();
+        o.type=type||"sine"; o.frequency.value=freq;
+        g.gain.setValueAtTime(0.0001,t);
+        g.gain.exponentialRampToValueAtTime(gain||0.12, t+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t+dur+0.05);
+      }
+      function phaseSound(kind){
+        if(kind==="in") { tone(523,0.18,"sine",0.10); tone(784,0.28,"sine",0.10,0.12); }
+        else if(kind==="out"){ tone(659,0.18,"sine",0.09); tone(440,0.3,"sine",0.09,0.12); }
+        else if(kind==="blow"){ tone(466,0.35,"triangle",0.14); }
+        else { tone(330,0.22,"sine",0.08); }
+      }
+      function tickSound(first){
+        tone(first?1320:990, 0.06, "square", first?0.05:0.028);
+      }
+      function finishSound(){ tone(523,0.2,"sine",0.1); tone(659,0.2,"sine",0.1,0.18); tone(784,0.45,"sine",0.11,0.36); }
+
+      // ---------- wake lock ----------
+      var wakeLock=null;
+      function requestWake(){
+        try{
+          if(navigator.wakeLock) navigator.wakeLock.request("screen").then(function(w){ wakeLock=w; setStatus("画面スリープ防止：オン"); }).catch(function(){});
+        }catch(e){}
+      }
+      function releaseWake(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+      document.addEventListener("visibilitychange", function(){
+        if(document.visibilityState==="visible" && state.running && !state.paused) requestWake();
+      });
+
+      // ---------- DOM ----------
+      var $ = function(id){ return document.getElementById(id); };
+      var els = { menus:$("menus"), keySeg:$("keySeg"), blowChips:$("blowChips"), restChips:$("restChips"), chipCurrent:$("chipCurrent"), stageLong:$("stageLongInfo"),
+        section:$("stageSection"), count:$("stageCount"), phase:$("phaseLabel"), sub:$("phaseSub"),
+        phasePair:$("phasePair"), phaseArea:$("phaseArea"),
+        cardA:$("cardA"), cardB:$("cardB"), cardALabel:$("cardALabel"), cardBLabel:$("cardBLabel"),
+        cardABeats:$("cardABeats"), cardBBeats:$("cardBBeats"), cardAHint:$("cardAHint"), cardBHint:$("cardBHint"),
+        cardANote:$("cardANote"), cardBNote:$("cardBNote"),
+        noteNow:$("noteNow"), noteName:$("noteName"), noteFinger:$("noteFinger"),
+        dynBox:$("dynBox"), dynLabel:$("dynLabel"), dynFill:$("dynFill"),
+        dots:$("dots"), remain:$("remainLine"), next:$("nextBox"),
+        prog:$("progFill"), elapsed:$("elapsedLabel"), total:$("totalLabel"),
+        start:$("btnStart"), skip:$("btnSkip"), repeat:$("btnRepeat"), restart:$("btnRestart"), sound:$("btnSound"),
+        lockNote:$("chipLockNote"), chipReset:$("chipReset"),
+        status:$("statusLine"), breakdown:$("breakdown") };
+      var PHASE_COLORS = { in:"var(--in)", out:"var(--out)", blow:"var(--blow)", rest:"var(--rest)", restnote:"var(--rest)" };
+      function setStatus(msg){ els.status.textContent = msg||""; }
+
+      function renderMenus(){
+        els.menus.innerHTML="";
+        Object.keys(MENUS).forEach(function(k){
+          var m=MENUS[k];
+          var b=document.createElement("button");
+          b.type="button"; b.className="menu-card"; b.setAttribute("aria-pressed", state.menu===k?"true":"false");
+          b.innerHTML='<span class="m-name"></span><span class="m-time"></span><span class="m-desc"></span>';
+          b.querySelector(".m-name").textContent=m.name;
+          b.querySelector(".m-time").textContent=m.timeLabel+" ｜ この設定での合計 "+fmt(menuTotal(k));
+          b.querySelector(".m-desc").textContent=m.desc;
+          b.disabled = state.running;
+          b.addEventListener("click", function(){ if(state.running){ setStatus("実行中はメニューを変更できません。変えたいときは「最初から（リセット）」を押してください"); return; } if(state.menu!==k){ state.menu=k; save("lt-menu",k); resetTimer(); renderAll(); } });
+          els.menus.appendChild(b);
+        });
+      }
+      function renderKey(){
+        if(!els.keySeg) return;
+        els.keySeg.innerHTML="";
+        KEYS.forEach(function(k){
+          var b=document.createElement("button");
+          b.type="button"; b.setAttribute("aria-pressed", state.key===k.id?"true":"false");
+          b.innerHTML = k.name+'<small></small>';
+          b.querySelector("small").textContent = "主音 "+k.tonic;
+          b.disabled = state.running;
+          b.addEventListener("click", function(){
+            if(state.running){ setStatus("実行中は調を変更できません。変えたいときは「最初から（リセット）」を押してください"); return; }
+            if(state.key!==k.id){ state.key=k.id; save("lt-key",k.id); resetTimer(); renderAll(); }
+          });
+          els.keySeg.appendChild(b);
+        });
+      }
+      function sectionNoteText(sec){
+        var t = currentKey().tonic;
+        if(sec.note==="__REMINGTON__"){
+          var seq = remingtonNotes();
+          return seq[0].name+"→"+seq[1].name+"→"+seq[0].name+"→"+seq[3].name+"…と戻りながら半音ずつ下がる（レミントン型）／ mf 一定";
+        }
+        if(sec.note==="__STRAIGHT_FLAT__") return t+"から半音ずつまっすぐ1オクターブ下の"+t+"まで下がる（13音）／ mf 一定";
+        if(sec.note==="__STRAIGHT_MOUNTAIN__") return t+"から半音ずつ1オクターブ下の"+t+"まで（13音）／ 前半 p→f、後半 f→p（山）";
+        if(sec.note==="__STRAIGHT_ALT__") return t+"から1オクターブ下の"+t+"まで（13音）／ 山（p→f→p）と谷（f→p→f）を1音ずつ交互に";
+        if(sec.note==="__STRAIGHT_AGAIN__") return t+"から1オクターブ下の"+t+"までもう一度（13音）、mf 一定";
+        return sec.note||"";
+      }
+      function renderChips(){
+        function build(container, values, current, isDefault, onPick){
+          container.innerHTML="";
+          values.forEach(function(v){
+            var b=document.createElement("button");
+            b.type="button"; b.className="chip";
+            b.setAttribute("aria-pressed", current===v?"true":"false");
+            b.textContent = v+"拍"+(isDefault===v?"（既定）":"");
+            b.disabled = state.running;
+            b.addEventListener("click", function(){ if(state.running){ setStatus("実行中はチップを変更できません。変えたいときは「最初から（リセット）」を押してください"); return; } onPick(v); });
+            container.appendChild(b);
+          });
+        }
+        var m=MENUS[state.menu];
+        build(els.blowChips,[4,8,12],blowBeats(),m.defBlow,function(v){ var nv=(v===m.defBlow?null:v); state.blowOverrides[state.menu]=nv; saveOverride("blow",state.menu,nv); save("lt-blow",null); resetTimer(); renderAll(); });
+        build(els.restChips,[2,4,8],restBeats(),m.defRest,function(v){ var nv2=(v===m.defRest?null:v); state.restOverrides[state.menu]=nv2; saveOverride("rest",state.menu,nv2); save("lt-rest",null); resetTimer(); renderAll(); });
+        if(els.chipCurrent){
+          els.chipCurrent.textContent = "現在の設定（"+m.name+"）：吹く "+blowBeats()+"拍 ・ 休む "+restBeats()+"拍 → 合計 "+fmt(totalSeconds(state.steps))+" ― "+(hasCustomOverride()?"カスタム（このメニューだけに保存）":"メニューの既定");
+        }
+      }
+      function renderBreakdown(){
+        var m=MENUS[state.menu];
+        var totSec=totalSeconds(state.steps);
+        els.breakdown.innerHTML="";
+        m.sections.forEach(function(sec){
+          var li=document.createElement("li");
+          var secSec=0, desc="";
+          if(sec.type==="breath"){ secSec=(sec.inB+sec.outB)*sec.reps; desc="吸う"+sec.inB+"拍・吐く"+sec.outB+"拍 × "+sec.reps+"回"; }
+          else if(sec.type==="rest"){ secSec=sec.sec; desc=sec.sec+"秒"; }
+          else { var n = sec.pattern==="remington"?12:sec.count; secSec=n*(blowBeats()+restBeats()); desc="吹く"+blowBeats()+"拍・休む"+restBeats()+"拍 × "+n+"音"; }
+          li.innerHTML='<span class="b-sec"></span> <span class="b-time"></span><span class="b-note"></span>';
+          li.querySelector(".b-sec").textContent=sec.label+"（"+desc+"）";
+          li.querySelector(".b-time").textContent=fmt(secSec)+(totSec? "（全体の約"+Math.round(secSec/totSec*100)+"%）" : "");
+          li.querySelector(".b-note").textContent=sectionNoteText(sec);
+          els.breakdown.appendChild(li);
+        });
+        var tot=document.createElement("li");
+        tot.innerHTML='<span class="b-sec"></span>';
+        tot.querySelector(".b-sec").textContent="合計（現在の設定） "+fmt(totalSeconds(state.steps));
+        els.breakdown.appendChild(tot);
+      }
+
+      // dynamics display for a blow step at a given elapsed beat (0-based fraction)
+      function dynInfo(step, frac){
+        // frac: 0..1 through the blow
+        if(step.dyn==="mountain"){
+          var lvl = frac<0.5 ? 0.15+frac*1.7 : 1-(frac-0.5)*1.7;
+          var lab = frac<0.5 ? "p → f（クレッシェンド）" : "f → p（デクレッシェンド）";
+          return {label:(frac<0.125?"p":frac<0.375?"mp":frac<0.5?"mf":frac<0.625?"f":frac<0.875?"mf":"mp")+" ｜ "+lab, pct:Math.max(8,Math.min(100,lvl*100))};
+        }
+        if(step.dyn==="valley"){
+          var lvl2 = frac<0.5 ? 1-frac*1.7 : 0.15+(frac-0.5)*1.7;
+          var lab2 = frac<0.5 ? "f → p（デクレッシェンド）" : "p → f（クレッシェンド）";
+          return {label:(frac<0.125?"f":frac<0.375?"mf":frac<0.5?"mp":frac<0.625?"p":frac<0.875?"mp":"mf")+" ｜ "+lab2, pct:Math.max(8,Math.min(100,lvl2*100))};
+        }
+        return {label:"mf 一定", pct:55};
+      }
+
+      // Display info for any single step, used for both the "now" (left)
+      // and "next" (right) cards so the roles never swap sides.
+      function infoForStep(step){
+        if(!step) return {kind:"end", label:"終わり", durText:"—", note:"", hint:"このあと完了です"};
+        if(step.kind==="in") return {kind:"in", label:"吸う", durText:step.dur+"拍", note:"", hint:"鼻からゆっくり"};
+        if(step.kind==="out") return {kind:"out", label:"吐く", durText:step.dur+"拍", note:"", hint:"細く長く、吐ききる"};
+        if(step.kind==="blow") return {kind:"blow", label:"吹く", durText:step.dur+"拍", note:step.note ? step.note.name+"（"+noteRelation(step.note)+"）" : "", hint:"エアアタックで"};
+        if(step.kind==="restnote") return {kind:"restnote", label:"休む", durText:step.dur+"拍", note:step.note ? step.note.name+"（吹いた音）" : "", hint:"楽器を休めて準備"};
+        if(step.kind==="rest") return {kind:"rest", label:"休憩", durText:step.dur+"秒", note:"", hint:"力を抜いて、普通の呼吸で"};
+        return {kind:step.kind, label:step.label, durText:step.dur+"拍", note:"", hint:""};
+      }
+      // The step that actually follows the current one. With repeat-one-note
+      // on, the rest after a blow loops back to that same blow instead of
+      // moving on, so the "next" card has to show that blow.
+      function nextStepFor(step){
+        if(state.repeat && step && step.kind==="restnote"){
+          for(var i=0;i<state.steps.length;i++){
+            if(state.steps[i].kind==="blow" && state.steps[i].group===step.group) return state.steps[i];
+          }
+        }
+        return state.steps[state.idx+1] || null;
+      }
+      function setCard(card, labelEl, beatsEl, noteEl, hintEl, info, role){
+        card.setAttribute("data-kind", info.kind);
+        card.className = "phase-card "+(role==="now"?"is-now":"is-next");
+        labelEl.textContent = info.label;
+        beatsEl.textContent = info.durText;
+        if(noteEl) noteEl.textContent = info.note||"";
+        hintEl.textContent = info.hint;
+        var badge = card.querySelector(".pc-role");
+        if(badge) badge.textContent = role==="now" ? "いま" : "つぎ";
+      }
+      function renderStage(){
+        var step = state.steps[state.idx];
+        var total = totalSeconds(state.steps);
+        els.total.textContent = "合計 "+fmt(total)+"（経過表示）";
+        if(els.stageLong){
+          els.stageLong.textContent = "ロングトーン：吹く "+blowBeats()+"拍 ・ 休む "+restBeats()+"拍（"+(hasCustomOverride()?"カスタム":"既定")+"）";
+        }
+        if(state.finished){
+          els.section.textContent="完了"; els.count.textContent="";
+          if(els.phasePair) els.phasePair.hidden=true;
+          els.phase.hidden=false;
+          els.phase.textContent="おつかれさま"; els.phase.style.color="var(--accent)";
+          els.sub.textContent="今日の分は終わりです。普通の呼吸でクールダウンしてください。";
+          els.noteNow.hidden=true; els.dynBox.hidden=true; els.dots.innerHTML="";
+          els.remain.innerHTML="残り <b>—</b>"; els.next.textContent="つぎ：—";
+          els.prog.style.width="100%"; els.elapsed.textContent="経過 "+fmt(total);
+          return;
+        }
+        if(!step){ return; }
+        els.section.textContent = step.section;
+        els.count.textContent = step.count||"";
+        var stageEl = els.phaseArea ? els.phaseArea.parentElement : els.phase.parentElement;
+        if(stageEl) stageEl.style.setProperty("--phase", PHASE_COLORS[step.kind]||"var(--ink)");
+        // Fixed roles: left card is always the current phase, right card is
+        // always the phase that follows it — including during the long
+        // section breaks, so the next "blow" (with its note) stays visible
+        // for the whole break and never arrives unannounced.
+        els.phasePair.hidden=false;
+        els.phase.hidden=true;
+        var nowInfo = infoForStep(step);
+        var nextStep = nextStepFor(step);
+        var nextInfo = infoForStep(nextStep);
+        setCard(els.cardA, els.cardALabel, els.cardABeats, els.cardANote, els.cardAHint, nowInfo, "now");
+        setCard(els.cardB, els.cardBLabel, els.cardBBeats, els.cardBNote, els.cardBHint, nextInfo, "next");
+        var nextDesc = nextStep ? "「"+nextInfo.label+"」"+nextInfo.durText+(nextInfo.note?"・"+nextInfo.note:"") : "終わり";
+        if(!state.running && !state.paused){
+          els.sub.textContent = "スタートを押すと左の「"+step.label+"」から始まります。つぎ（右）は "+nextDesc+" です";
+        } else if(step.kind==="in") els.sub.textContent="鼻からゆっくり吸ってください（息止めはしません） ― つぎ（右）は "+nextDesc;
+        else if(step.kind==="out") els.sub.textContent="細く長く、吐ききるイメージで ― つぎ（右）は "+nextDesc;
+        else if(step.kind==="blow") els.sub.textContent = (step.section.indexOf("山")>=0||step.dyn==="mountain"||step.dyn==="valley" ? "強弱の表示に合わせて吹いてください" : "エアアタックで、mf 一定に")+" ― つぎ（右）は "+nextDesc;
+        else if(step.kind==="rest") els.sub.textContent="力を抜いて、普通の呼吸で休んでください ― つぎ（右）は "+nextDesc+"。構える準備を";
+        else els.sub.textContent="楽器を休めて、次の音の準備を ― つぎ（右）は "+nextDesc;
+        // note display
+        if(step.kind==="blow"){
+          els.noteNow.hidden=false;
+          els.noteName.textContent = step.note.name;
+          els.noteFinger.textContent = "（"+noteRelation(step.note)+"）";
+          els.dynBox.hidden=false;
+        } else if(step.kind==="restnote"){
+          els.noteNow.hidden=false;
+          els.noteName.textContent = step.note.name;
+          els.noteFinger.textContent = "（吹いた音）次も同じ流れで準備";
+          els.dynBox.hidden=true;
+        } else {
+          els.noteNow.hidden=true; els.dynBox.hidden=true;
+        }
+        // dots
+        els.dots.innerHTML="";
+        for(var i=0;i<step.dur;i++){ var d=document.createElement("span"); d.className="dot"; els.dots.appendChild(d); }
+        // next preview
+        var nb = nextBlowNote(state.idx+ (step.kind==="blow"?1:0));
+        // if current is restnote, next blow is the following note; if current blow, show following note too
+        if(step.kind==="blow" || step.kind==="restnote") nb = nextBlowNote(state.idx+1);
+        if(nb && (step.kind==="blow"||step.kind==="restnote"||step.kind==="rest")){
+          els.next.innerHTML="つぎの音：<b></b> <span></span>";
+          els.next.querySelector("b").textContent=nb.note.name;
+          els.next.querySelector("span").textContent=noteRelation(nb.note);
+        } else if(step.kind==="in"||step.kind==="out"){
+          var first = nextBlowNote(state.idx);
+          if(first){ els.next.innerHTML="このあとの最初の音：<b></b> <span></span>"; els.next.querySelector("b").textContent=first.note.name; els.next.querySelector("span").textContent=noteRelation(first.note); }
+          else els.next.textContent="つぎ：—";
+        } else {
+          var nb2 = nextBlowNote(state.idx+1);
+          els.next.textContent = nb2 ? "" : "つぎ：—";
+          if(nb2){ els.next.innerHTML="つぎの音：<b></b> <span></span>"; els.next.querySelector("b").textContent=nb2.note.name; els.next.querySelector("span").textContent=noteRelation(nb2.note); }
+        }
+        updateProgress();
+        if(typeof updateControls==="function") updateControls();
+      }
+      function elapsedSeconds(){
+        var done=0;
+        for(var i=0;i<state.idx && i<state.steps.length;i++) done+=state.steps[i].dur;
+        var step=state.steps[state.idx];
+        if(step && state.running){
+          var remain = state.paused ? state.remainMs/1000 : Math.max(0,(state.phaseEnd-performance.now())/1000);
+          done += step.dur - remain;
+        }
+        return Math.max(0,done);
+      }
+      function updateProgress(){
+        var total=totalSeconds(state.steps);
+        var el=elapsedSeconds();
+        els.prog.style.width = total? Math.min(100, el/total*100)+"%" : "0%";
+        els.elapsed.textContent="経過 "+fmt(el);
+        var step=state.steps[state.idx];
+        if(step && !state.finished){
+          var remain = state.paused ? state.remainMs/1000 : (state.running? Math.max(0,(state.phaseEnd-performance.now())/1000) : step.dur);
+          var remainBeats=Math.ceil(remain-0.001);
+          if(!state.running && !state.paused) remainBeats=step.dur;
+          if(step.kind==="rest"){
+            els.remain.innerHTML="残り <b>"+remainBeats+" 秒</b>（"+step.dur+"秒）";
+          } else {
+            els.remain.innerHTML="残り <b>"+remainBeats+" 拍</b>（"+step.dur+"拍中）";
+          }
+          var doneBeats = step.dur - remainBeats;
+          var dots=els.dots.children;
+          for(var i=0;i<dots.length;i++) dots[i].className = "dot"+(i<doneBeats?" done":"");
+          if(step.kind==="blow"){
+            var frac = step.dur? Math.min(1, Math.max(0,(step.dur-remain)/step.dur)) : 0;
+            var info=dynInfo(step, frac);
+            els.dynLabel.textContent=info.label; els.dynFill.style.width=info.pct+"%";
+          }
+        }
+      }
+
+      // ---------- timer engine ----------
+      function startStep(playSnd){
+        var step=state.steps[state.idx];
+        if(!step){ finish(); return; }
+        state.lastBeat=-1;
+        state.phaseEnd = performance.now() + step.dur*1000;
+        renderStage();
+        if(playSnd!==false) phaseSound(step.kind);
+        tickStep(true);
+      }
+      function tickStep(force){
+        var step=state.steps[state.idx];
+        if(!step) return;
+        var remainMs = state.phaseEnd - performance.now();
+        if(remainMs<=0){ advance(); return; }
+        var remainBeats=Math.ceil(remainMs/1000-0.001);
+        var beatIndex = step.dur - remainBeats; // 0-based current beat
+        if(force || beatIndex!==state.lastBeat){
+          if(state.lastBeat!==-1 || force){ /* tick on each new beat */ }
+          if(beatIndex!==state.lastBeat && !(force && beatIndex===0 && state.justSounded)){
+            tickSound(beatIndex===0);
+          }
+          state.lastBeat=beatIndex;
+        }
+        state.justSounded=false;
+        updateProgress();
+      }
+      function loop(){
+        if(!state.running || state.paused) return;
+        tickStep(false);
+      }
+      function advance(){
+        var step=state.steps[state.idx];
+        // repeat-one-note handling: after the rest following a blow of the repeated group, loop back
+        if(state.repeat && step && step.kind==="restnote"){
+          var blowIdx=-1;
+          for(var i=0;i<state.steps.length;i++){ if(state.steps[i].kind==="blow" && state.steps[i].group===step.group){ blowIdx=i; break; } }
+          if(blowIdx>=0){ state.idx=blowIdx; startStep(true); return; }
+        }
+        state.idx++;
+        if(state.idx>=state.steps.length){ finish(); return; }
+        startStep(true);
+      }
+      function finish(){
+        stopTimer();
+        state.finished=true; state.running=false;
+        releaseWake();
+        renderStage(); updateControls();
+        setStatus("完了しました。おつかれさまです。");
+        finishSound();
+      }
+      function stopTimer(){ if(state.timerId){ clearInterval(state.timerId); state.timerId=null; } }
+      function resetTimer(){
+        stopTimer();
+        state.steps=buildSteps();
+        state.idx=0; state.running=false; state.paused=false; state.finished=false; state.repeat=false;
+        els.repeat.setAttribute("aria-pressed","false");
+        releaseWake();
+        renderStage(); updateControls(); setStatus("");
+      }
+      // While a run is in progress (including paused), chips and menu cards
+      // are locked so a stray tap can't stop or rebuild the session.
+      function applyLock(){
+        var locked = state.running;
+        [els.blowChips, els.restChips].forEach(function(c){
+          if(!c) return;
+          var bs=c.querySelectorAll("button");
+          for(var i=0;i<bs.length;i++) bs[i].disabled=locked;
+        });
+        var mb=els.menus.querySelectorAll("button");
+        for(var i=0;i<mb.length;i++) mb[i].disabled=locked;
+        if(els.keySeg){ var kb=els.keySeg.querySelectorAll("button"); for(var j=0;j<kb.length;j++) kb[j].disabled=locked; }
+        if(els.chipReset) els.chipReset.disabled=locked;
+        if(els.lockNote) els.lockNote.hidden=!locked;
+      }
+      function updateControls(){
+        els.start.textContent = state.finished ? "↺ もう一度" : (!state.running ? "▶ スタート" : (state.paused ? "▶ 再開" : "⏸ 一時停止"));
+        var active = state.running;
+        els.skip.disabled=!active; els.restart.disabled=!active && !state.finished;
+        els.repeat.disabled=!(active && state.steps[state.idx] && (state.steps[state.idx].kind==="blow"||state.steps[state.idx].kind==="restnote"));
+        applyLock();
+      }
+
+      els.start.addEventListener("click", function(){
+        ensureAudio();
+        if(state.finished){ resetTimer(); }
+        if(!state.running){
+          state.running=true; state.paused=false;
+          requestWake();
+          state.justSounded=true;
+          startStep(true);
+          state.timerId=setInterval(loop,100);
+          setStatus("実行中…（画面はスリープしません）");
+        } else if(!state.paused){
+          state.paused=true; state.remainMs=Math.max(0,state.phaseEnd-performance.now());
+          setStatus("一時停止中");
+        } else {
+          state.paused=false; state.phaseEnd=performance.now()+state.remainMs;
+          ensureAudio(); setStatus("再開しました");
+        }
+        updateControls();
+      });
+      els.skip.addEventListener("click", function(){
+        if(!state.running) return;
+        state.paused=false;
+        state.justSounded=true;
+        advance();
+        if(!state.timerId && state.running) state.timerId=setInterval(loop,100);
+        updateControls();
+      });
+      els.repeat.addEventListener("click", function(){
+        state.repeat=!state.repeat;
+        els.repeat.setAttribute("aria-pressed", state.repeat?"true":"false");
+        setStatus(state.repeat?"この音をくり返します（もう一度押すと解除）":"くり返しを解除しました");
+      });
+      els.restart.addEventListener("click", function(){ resetTimer(); setStatus("最初に戻しました"); });
+      els.sound.addEventListener("click", function(){
+        state.sound=!state.sound;
+        els.sound.setAttribute("aria-pressed", state.sound?"true":"false");
+        els.sound.textContent="音："+(state.sound?"オン":"オフ");
+        if(state.sound) ensureAudio();
+      });
+      els.chipReset.addEventListener("click", function(){
+        if(state.running){ setStatus("実行中は変更できません。先に「最初から（リセット）」を押してください"); return; }
+        state.blowOverrides[state.menu]=null; state.restOverrides[state.menu]=null;
+        saveOverride("blow",state.menu,null); saveOverride("rest",state.menu,null);
+        save("lt-blow",null); save("lt-rest",null);
+        resetTimer(); renderAll(); setStatus("このメニューの既定に戻しました");
+      });
+
+      function renderAll(){ renderMenus(); renderKey(); renderChips(); renderBreakdown(); renderStage(); updateControls(); }
+
+      state.steps=buildSteps();
+      renderAll();
+    })();
+    </script>
+  <script data-goatcounter="https://longtone-timer.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
